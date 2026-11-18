@@ -77,9 +77,12 @@ BLE 使用 BLE GATT Source，复用相同 App Partition Target / Verifier / OTA 
 1. `esp_ota_service` v0.5.2~3 是较新的组件，生态使用量和第三方实测样本有限。它是最值得先跑的候选，不是已通过 MineLamp 实机认证的成品。
 2. Component Registry 标注支持所有目标，但当前 `ota_ble` 示例页面给出的直接构建命令使用 `esp32s3`，默认分区配置为 4 MB。**必须在独立 POC 中切换 `esp32c3` 并完成完整编译、烧录和传输验证**，不能只凭组件支持矩阵推断 C3 示例已通过。
 3. `ota_ble` 使用 Espressif BLE OTA APP Profile，与当前 MineLamp A5 自定义帧和 GATT UUID 不同。它用于证明底层 OTA 数据路径，不是直接替换当前 App 协议。
-4. 官方 BLE 示例可使用 Espressif BLE OTA Android App。BLE Profile 的 CRC/ACK 证明链路分包正确；最终 SHA-256 仍需在 POC 配置中明确启用并验证，不能把分包 CRC 当作整镜像 SHA-256。
-5. 官方组件 License 为 **Espressif Modified MIT**，限定与 Espressif 产品配合使用；ESP32 属于其适用范围，但分发时应保留许可文本。
-6. 当前发布的 BLE Source 不支持 seek，因此不要错误启用 BLE 断点续传；断连后应中止/清理会话并从头重试，除非后续另行实现经验证的持久化偏移协议。
+4. **已核对官方 BLE 示例源码：它当前把 `.verifier = NULL`，并只挂了 App 版本 Checker。** 因而官方示例默认只验证 BLE Sector CRC / 镜像结构，不会自动完成整个 BIN 的 SHA-256。要满足 MineLamp 需求，POC 必须显式创建 `esp_ota_service_verifier_sha256` 并提供 32 字节 expected_hash；第一轮可将测试 BIN 的摘要预置在设备，随后再验证由独立、受保护的元数据命令动态传入摘要。不能把 Sector CRC 当成整镜像 SHA-256。
+5. **已核对官方 HTTP 示例源码：它默认使用明文 HTTP URL，并把 BIN URL 单独写在宏中。** Manifest Checker 当前解析 `version`、`project_name`、`size` 和可选 `sha256` / `md5`，并不完整覆盖 MineLamp 的 `device`、`url`、`changelog` 字段。HTTP 示例在缺少 SHA 或 SHA Verifier 创建失败时会继续无完整性校验地运行；MineLamp POC 必须改成 fail-closed：Manifest 缺 hash、摘要格式错误、Verifier 创建失败、device 不匹配或 URL 不合法时，全部拒绝升级。HTTPS 必须配置 CA/证书验证。
+6. 官方 BLE 示例的 `sdkconfig.defaults` 将 `CONFIG_IDF_TARGET` 固定为 `esp32s3`；它的 4 MB 分区 CSV 给两个 OTA Slot 各分配 1500 KB。组件虽声明支持 all targets，但 C3 仍需独立修改 target、分区并实测。
+7. 官方 BLE 示例把等待 START 的超时配置为 180 秒，不是 MineLamp 当前的 15 秒上电窗口；POC 应先按官方 START/ACK 生命周期测试，不沿用旧 15 秒门槛。
+8. 官方组件 License 为 **Espressif Modified MIT**，限定与 Espressif 产品配合使用；ESP32 属于其适用范围，但分发时应保留许可文本。
+9. 当前发布的 BLE Source 不支持 seek，因此不要错误启用 BLE 断点续传；断连后应中止/清理会话并从头重试，除非后续另行实现经验证的持久化偏移协议。
 
 ## 3. 第二优先：Espressif BLE OTA Raw Profile + 原生 OTA API
 
@@ -201,17 +204,18 @@ C3FH4 的实际 Flash 容量和现有分区表必须从芯片与当前构建产�
 
 ### P1：BLE 单通道端到端
 
-1. 从官方 `ota_ble` 示例创建独立工程。
-2. 将目标切换为 `esp32c3`，确认 NimBLE Host、4 MB Flash 和 OTA 分区配置。
-3. USB 烧录并保存完整串口启动日志、GATT Service/Characteristic 清单。
-4. 安装 Espressif BLE OTA Android App：https://github.com/EspressifApps/esp-ble-ota-android/releases
-5. 选择 BIN 进行 BLE 传输，记录每个 START / Sector / ACK / STOP、字节数、CRC 错误、耗时和设备串口日志。
-6. 配置并验证整镜像 SHA-256；故意使用错误摘要时必须失败，且不能提交启动分区。
-7. 设备重启后读取版本号和运行分区，确认升级成功。
+1. 从官方 `ota_ble` 示例创建独立工程；先按原始官方流程证明 BLE 传输 / Sector CRC / ACK 通路，再增加整镜像 SHA-256 Verifier。第一轮把已知测试 BIN 的 32 字节 SHA-256 预置到 POC，专门验证 hash mismatch 时 Target 不会 Commit。
+2. 由于官方 BLE APP 协议本身没有提供 MineLamp Manifest 的 SHA-256 字段，动态更新时必须增加独立元数据步骤：由已配对且通过权限校验的控制通道先提交 `device/version/size/sha256`，设备校验后保存到当前 OTA session；随后 BLE Source 传输 BIN。不要修改 Sector 数据包格式来夹带未经验证的字段。
+3. 将目标切换为 `esp32c3`，确认 NimBLE Host、实际 Flash 容量和 OTA 分区配置。
+4. USB 烧录并保存完整串口启动日志、GATT Service/Characteristic 清单。
+5. 安装 Espressif BLE OTA Android App：https://github.com/EspressifApps/esp-ble-ota-android/releases
+6. 选择 BIN 进行 BLE 传输，记录每个 START / Sector / ACK / STOP、字节数、CRC 错误、耗时和设备串口日志。
+7. 配置并验证整镜像 SHA-256；故意使用错误摘要时必须失败，且不能提交启动分区。
+8. 设备重启后读取版本号和运行分区，确认升级成功。
 
 ### P2：Wi-Fi HTTPS 单通道端到端
 
-1. 基于官方 `ota_http` 示例配置设备 Wi-Fi。
+1. 基于官方 `ota_http` 示例配置设备 Wi-Fi。注意上游示例默认是 HTTP，且在 SHA 缺失/Verifier 创建失败时可能降级为不校验；POC 必须改为 HTTPS + fail-closed。
 2. 使用测试 HTTPS 服务器，固件内置可信 CA 根证书或使用 ESP x509 Certificate Bundle；不能关闭证书校验。
 3. Manifest 至少包含 `device`、`version`、`url`、`size`、`sha256`、`changelog`。先确认组件内置 Manifest Checker 的字段要求；不支持的扩展字段通过自定义 Checker 处理。
 4. 设备主动 HTTPS GET Manifest 和 BIN（PULL），记录 HTTP 状态、TLS 验证、下载字节数、SHA-256、Commit 与重启日志。
