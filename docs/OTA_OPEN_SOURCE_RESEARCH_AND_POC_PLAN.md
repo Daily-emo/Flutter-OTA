@@ -79,7 +79,7 @@ BLE 使用 BLE GATT Source，复用相同 App Partition Target / Verifier / OTA 
 3. `ota_ble` 使用 Espressif BLE OTA APP Profile，与当前 MineLamp A5 自定义帧和 GATT UUID 不同。它用于证明底层 OTA 数据路径，不是直接替换当前 App 协议。
 4. **已核对官方 BLE 示例源码：它当前把 `.verifier = NULL`，并只挂了 App 版本 Checker。** 因而官方示例默认只验证 BLE Sector CRC / 镜像结构，不会自动完成整个 BIN 的 SHA-256。要满足 MineLamp 需求，POC 必须显式创建 `esp_ota_service_verifier_sha256` 并提供 32 字节 expected_hash；第一轮可将测试 BIN 的摘要预置在设备，随后再验证由独立、受保护的元数据命令动态传入摘要。不能把 Sector CRC 当成整镜像 SHA-256。
 5. **已核对官方 HTTP 示例源码：它默认使用明文 HTTP URL，并把 BIN URL 单独写在宏中。** Manifest Checker 当前解析 `version`、`project_name`、`size` 和可选 `sha256` / `md5`，并不完整覆盖 MineLamp 的 `device`、`url`、`changelog` 字段。HTTP 示例在缺少 SHA 或 SHA Verifier 创建失败时会继续无完整性校验地运行；MineLamp POC 必须改成 fail-closed：Manifest 缺 hash、摘要格式错误、Verifier 创建失败、device 不匹配或 URL 不合法时，全部拒绝升级。HTTPS 必须配置 CA/证书验证。
-6. 官方 BLE 示例的 `sdkconfig.defaults` 将 `CONFIG_IDF_TARGET` 固定为 `esp32s3`；它的 4 MB 分区 CSV 给两个 OTA Slot 各分配 1500 KB。组件虽声明支持 all targets，但 C3 仍需独立修改 target、分区并实测。
+6. ESP32-C3FH4 官方数据手册标明片内 Flash 为 4 MB。官方 BLE 示例的 `sdkconfig.defaults` 将 `CONFIG_IDF_TARGET` 固定为 `esp32s3`；其 4 MB 分区 CSV 给两个 OTA Slot 各分配 1500 KB。相反，官方 HTTP 示例的 `sdkconfig.defaults` 固定 8 MB，分区 CSV 给两个 OTA Slot 各 2 MB，**不能直接照搬到 C3FH4**。统一 POC 应以 4 MB BLE 示例分区表为基础，让 BLE / Wi-Fi 共用完全相同的分区布局，并用 `idf.py size` 确认 BIN 小于 1500 KB（若不够，先评估裁剪或更改分区布局，不要直接烧录）。组件虽声明支持 all targets，但 C3 仍需独立修改 target 并实测。
 7. 官方 BLE 示例把等待 START 的超时配置为 180 秒，不是 MineLamp 当前的 15 秒上电窗口；POC 应先按官方 START/ACK 生命周期测试，不沿用旧 15 秒门槛。
 8. 官方组件 License 为 **Espressif Modified MIT**，限定与 Espressif 产品配合使用；ESP32 属于其适用范围，但分发时应保留许可文本。
 9. 当前发布的 BLE Source 不支持 seek，因此不要错误启用 BLE 断点续传；断连后应中止/清理会话并从头重试，除非后续另行实现经验证的持久化偏移协议。
@@ -198,7 +198,7 @@ C3FH4 的实际 Flash 容量和现有分区表必须从芯片与当前构建产�
 
 1. 固定 ESP-IDF 版本和工具链；记录 `idf.py --version`、目标芯片、Flash 容量、分区表。
 2. 备份当前 C3 稳定固件和分区 CSV；POC 只通过 USB 烧录独立固件。
-3. 检查至少有两个可容纳测试 BIN 的 OTA App Slot 和 `otadata`。
+3. C3FH4 为 4 MB Flash；检查至少有两个可容纳测试 BIN 的 OTA App Slot 和 `otadata` 分区。上游 BLE 示例的 1500 KB 双 Slot 可作为起点；HTTP 示例的 8 MB / 2 MB 双 Slot 布局不能直接用在此芯片上。
 4. 选择固定 `esp_ota_service` 版本，先在 C3 执行完整编译；如果 C3 不通过，记录首个错误和依赖链，不用改现有 Arduino 项目绕过。
 5. POC 不沿用 MineLamp 当前 15 秒上电 PREPARE 窗口；先按官方 Profile 自身 START/ACK 流程测试，避免把旧应用层窗口故障带进新底层验证。
 
@@ -297,3 +297,4 @@ C3FH4 的实际 Flash 容量和现有分区表必须从芯片与当前构建产�
 19. SHA-256 Verifier API: https://github.com/espressif/esp-adf/blob/master/components/esp_ota_service/include/verifier/esp_ota_service_verifier_sha256.h
 20. BLE example partition table: https://github.com/espressif/esp-adf/blob/master/components/esp_ota_service/examples/ota_ble/partitions.csv
 21. BLE example sdkconfig defaults: https://github.com/espressif/esp-adf/blob/master/components/esp_ota_service/examples/ota_ble/sdkconfig.defaults
+22. ESP32-C3 Series Datasheet (C3FH4 4 MB Flash): https://documentation.espressif.com/esp32-c3_datasheet_en.pdf
