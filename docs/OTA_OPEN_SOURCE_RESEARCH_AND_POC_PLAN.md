@@ -219,6 +219,8 @@ C3FH4 的实际 Flash 容量和现有分区表必须从芯片与当前构建产�
 
 ### P3：双向交叉验证（最重要）
 
+先分别以官方 `ota_ble` 与 `ota_http` 示例作为基准，两个通道各自通过后，再建立**一个同时编译 BLE Source 与 HTTP Source 的统一 POC 固件**：共用同一个 `esp_ota_service_t`、同一个 App Partition Target 和同一套 SHA-256 / Commit / Rollback 生命周期；由测试命令选择本次使用 BLE 或 Wi-Fi，禁止两个 Source 并发写入。不能只用两个互不相关的 Demo 分别成功来宣称双通道共用 OTA 核心。
+
 使用不同版本号和可识别的固件 Build ID：
 
 - USB 初始烧录 POC v0.1.0。
