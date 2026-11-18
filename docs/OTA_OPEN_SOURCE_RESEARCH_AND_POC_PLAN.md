@@ -291,3 +291,9 @@ C3FH4 的实际 Flash 容量和现有分区表必须从芯片与当前构建产�
 13. fbiego ESP32 BLE OTA Arduino: https://github.com/fbiego/ESP32_BLE_OTA_Arduino
 14. Meshtastic ESP32 Unified OTA: https://github.com/meshtastic/esp32-unified-ota
 15. ESP32 Secure FOTA: https://github.com/izhardh/esp32-secure-fota
+16. OTA BLE example source (verifier currently NULL): https://github.com/espressif/esp-adf/blob/master/components/esp_ota_service/examples/ota_ble/main/esp_ota_service_ble_example.c
+17. OTA HTTP example source (Manifest / SHA-256 flow): https://github.com/espressif/esp-adf/blob/master/components/esp_ota_service/examples/ota_http/main/esp_ota_service_http_example.c
+18. Manifest Checker schema: https://github.com/espressif/esp-adf/blob/master/components/esp_ota_service/include/checker/esp_ota_service_checker_manifest.h
+19. SHA-256 Verifier API: https://github.com/espressif/esp-adf/blob/master/components/esp_ota_service/include/verifier/esp_ota_service_verifier_sha256.h
+20. BLE example partition table: https://github.com/espressif/esp-adf/blob/master/components/esp_ota_service/examples/ota_ble/partitions.csv
+21. BLE example sdkconfig defaults: https://github.com/espressif/esp-adf/blob/master/components/esp_ota_service/examples/ota_ble/sdkconfig.defaults
