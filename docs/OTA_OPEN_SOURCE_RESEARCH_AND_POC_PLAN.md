@@ -7,7 +7,7 @@
 
 ## 0. 本次决策
 
-暂停现有 Flutter App / UniApp OTA 功能开发，不继续修补当前半成品协议。建立独立的 ESP32-C3 OTA POC 工程，先证明 BLE 与 Wi-Fi 两条数据源都能把完整 BIN 写入 OTA 非活动分区、通过校验、切换启动分区、重启并回读版本。
+暂停客户端正式功能与 UI 开发，不继续修补当前未跑通的 OTA 流程。建立独立的 ESP32-C3 OTA POC 工程，先证明 BLE 与 Wi-Fi 两条数据源都能把完整 BIN 写入 OTA 非活动分区、通过校验、切换启动分区、重启并回读版本。
 
 **首选验证：Espressif `esp_ota_service`。**
 
@@ -23,7 +23,7 @@
 - 现有 BLE A5 控制帧、GATT UUID、MITM 权限和 15 秒上电准备窗口是 MineLamp 自有协议；不能假定它与 Espressif BLE OTA Profile 兼容。
 - 历史诊断中，设备曾返回明确的 `WINDOW_EXPIRED`（15 秒窗口从设备上电开始计时），因此“准备窗口过期”与“完全没有收到设备 ACK”必须区分。
 - 现有 Wi-Fi 路径与目标设计不同：目标是 ESP32 主动通过 HTTPS 下载 BIN（PULL），不是手机向设备局域网 HTTP PUSH。
-- 本 POC 不修改现有灯控协议、UniApp、Flutter App 或当前生产固件；先用 USB 串口烧录独立测试固件。
+- 本 POC 不修改现有灯控协议、UniApp 客户端或当前生产固件；先用 USB 串口烧录独立测试固件。
 - 不使用独立 `.sig` 文件，不加入 RSA/ECDSA/Ed25519 应用层签名流程；保留 HTTPS 证书验证与 SHA-256 完整性校验。SHA-256 不等同于发布者身份认证。
 
 ## 2. 首选：Espressif ESP OTA Service
@@ -262,10 +262,10 @@ C3FH4 的实际 Flash 容量和现有分区表必须从芯片与当前构建产�
 
 ## 8. POC 之后才进入 App
 
-底层验证通过后，再决定 Flutter 如何接入：
+底层验证通过后，再按以下顺序接入 UniApp：
 
-- 若采用 `esp_ota_service`：Flutter BLE 客户端按官方 ESP BLE OTA Profile 实现；Wi-Fi 通道只向设备下发 HTTPS Manifest / 启动请求和查询状态，BIN 由设备自行下载。
-- 若采用 `ble_ota_raw`：Flutter BLE 端按官方 Sector / Sequence / CRC16 / ACK 协议实现；Wi-Fi 仍为设备端 HTTPS PULL。
+- 若采用 `esp_ota_service`：先使用 Espressif 官方 BLE OTA App 验证设备端，再由 UniApp BLE 客户端按相同官方 ESP BLE OTA Profile 实现；Wi-Fi 通道向设备下发 HTTPS Manifest / 启动请求和查询状态，BIN 由设备自行下载。
+- 若采用 `ble_ota_raw`：UniApp BLE 端按官方 Sector / Sequence / CRC16 / ACK 协议实现；Wi-Fi 仍为设备端 HTTPS PULL。
 - MineLamp 原有身份服务、灯控协议和配对安全策略单独保留；不要把 OTA Profile 的测试 UUID 与现有灯控 UUID 混为一谈。
 - 当前 A5 自定义 OTA 协议只有在完成兼容性评估后才决定保留或替换，不预先把它当成新底层协议的前提。
 
@@ -274,7 +274,7 @@ C3FH4 的实际 Flash 容量和现有分区表必须从芯片与当前构建产�
 - 尚未在本执行环境安装 ESP-IDF 工具链；当前没有 `idf.py`、RISC-V ESP 编译器或 Arduino CLI。
 - 当前没有连接可供我直接烧录和测量的 ESP32-C3FH4 开发板。
 - 因此本报告是基于官方文档、Component Registry 和公开源码的调研与可执行测试计划；**不是已完成的 C3 编译报告，更不是 BLE/Wi-Fi OTA 真机通过报告**。
-- 现有 Flutter 分支没有被改动；本分支只承载 OTA POC 调研文档。下一步应建立独立的最小 ESP-IDF POC 工程并在 C3 上实测，不继续扩展 Flutter UI。
+- 现有客户端代码没有被改动；本分支先承载 OTA POC 调研和设备端工程。下一步应建立独立的最小 ESP-IDF POC 工程并在 C3 上实测，底层通过后再开发 UniApp 通信测试模块。
 
 ## 10. 参考资料总表
 
