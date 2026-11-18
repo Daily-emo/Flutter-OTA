@@ -1,0 +1,2 @@
+import 'package:flutter/material.dart';
+class OtaPage extends StatelessWidget { const OtaPage({super.key}); @override Widget build(BuildContext context)=>ListView(padding:const EdgeInsets.all(16),children:const[Card(child:ListTile(title:Text('01 · OTA 准备'),subtitle:Text('连接设备后查询能力并申请准备。'))),Card(child:ListTile(title:Text('02 · 固件与校验'),subtitle:Text('选择 BIN，检查型号、长度和 SHA-256。'))),Card(child:ListTile(title:Text('安全约束'),subtitle:Text('设备校验通过并重启回连确认版本后才显示成功。')))]); }
