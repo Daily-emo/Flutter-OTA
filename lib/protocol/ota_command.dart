@@ -1,0 +1,2 @@
+enum OtaCommand { queryCaps(1),prepare(2),begin(3),data(4),queryStatus(5),verify(6),commit(7),abort(8),wifiStart(9),event(10); const OtaCommand(this.code); final int code; static OtaCommand fromCode(int code)=>OtaCommand.values.firstWhere((v)=>v.code==code,orElse:()=>throw FormatException('Unknown command: $code')); }
+abstract final class OtaFrameFlags { static const response=1,error=2,ackRequired=4,final=8; }
