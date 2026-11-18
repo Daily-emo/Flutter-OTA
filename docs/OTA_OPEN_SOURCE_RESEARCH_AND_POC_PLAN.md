@@ -39,13 +39,15 @@
 | 版本变更 | https://components.espressif.com/components/espressif/esp_ota_service/versions/0.5.2~3/changelog?language=en | 版本变更记录 |
 | License | https://components.espressif.com/components/espressif/esp_ota_service/versions/0.5.2~3/license?language=en | Espressif Modified MIT |
 
-固定版本依赖命令：
+固定版本依赖配置（建议在 `main/idf_component.yml` 中声明精确版本，并提交 Component Manager 生成的锁文件）：
 
-```bash
-idf.py add-dependency "espressif/esp_ota_service^0.5.2~3"
+```yaml
+dependencies:
+  espressif/esp_ota_service:
+    version: "0.5.2~3"
 ```
 
-不要在 POC 中使用未锁定的 `latest` 依赖。
+不要使用 `latest` 或宽泛版本范围。实际解析出的组件版本必须记录在构建报告中。
 
 ### 2.2 为什么优先选它
 
